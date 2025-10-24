@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逃离代码模式</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Courier New', monospace;
+            background: #2d2d2d;
+            color: #f0f0f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: auto;
+            position: relative;
+        }
+        
+        .terminal {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 2rem;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            margin: 20px auto;
+            min-height: fit-content;
+        }
+        
+        .terminal-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #333;
+        }
+        
+        .terminal-buttons {
+            display: flex;
+            gap: 8px;
+            margin-right: 1rem;
+        }
+        
+        .terminal-button {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .terminal-button.close { background: #ff5f57; }
+        .terminal-button.minimize { background: #ffbd2e; }
+        .terminal-button.maximize { background: #28ca42; }
+        
+        .terminal-title {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .prompt {
+            color: #00ff00;
+            margin-bottom: 1rem;
+        }
+        
+        .command {
+            color: #f0f0f0;
+            margin-bottom: 0.5rem;
+        }
+        
+        .output {
+            color: #888;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+        
+        .escape-menu {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #333;
+        }
+        
+        .escape-option {
+            display: block;
+            width: 100%;
+            background: #333;
+            color: #f0f0f0;
+            border: 1px solid #555;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            text-align: left;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+        
+        .escape-option:hover {
+            background: #444;
+            border-color: #666;
+        }
+        
+        .escape-option:active {
+            background: #222;
+        }
+        
+        .audio-mode {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        
+        .audio-mode.show {
+            display: flex;
+        }
+        
+        .audio-status {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+        
+        .audio-controls {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .audio-button {
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            padding: 0.8rem 1.5rem;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+        
+        .audio-button:hover {
+            background: #444;
+        }
+        
+        .audio-button.danger {
+            background: #5a0000;
+            border-color: #770000;
+        }
+        
+        .audio-button.danger:hover {
+            background: #660000;
+        }
+        
+        .typing-effect {
+            overflow: hidden;
+            white-space: nowrap;
+            animation: typing 2s steps(40, end);
+        }
+        
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        
+        .blink {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .terminal-input {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            outline: none;
+            caret-color: #00ff00;
+            width: 200px;
+        }
+        
+        .glitch {
+            animation: glitch 0.3s infinite;
+        }
+        
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+        
+        .screen-shatter {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        
+        .shatter-piece {
+            position: absolute;
+            background: #2d2d2d;
+            animation: shatter 2s ease-out forwards;
+        }
+        
+        @keyframes shatter {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) rotate(var(--r));
+                opacity: 0;
+            }
+        }
+        
+        .falling-char {
+            position: fixed;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            z-index: 9998;
+            animation: fall linear forwards;
+        }
+        
+        @keyframes fall {
+            0% {
+                transform: translateY(-100vh);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+        
+        /* 无限滚动彩蛋样式 */
+        .scroll-hint {
+            position: absolute;
+            color: #333;
+            font-size: 14px;
+            text-align: center;
+            width: 100%;
+            animation: pulse 2s infinite;
+        }
+        
+        .scroll-warning {
+            position: absolute;
+            color: #ff0000;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .star {
+            position: fixed;
+            color: #ffffff;
+            font-size: 2px;
+            z-index: 10000;
+            animation: twinkle 3s infinite;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
+        }
+        
+        .error-404 {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', monospace;
+            font-size: 2rem;
+            z-index: 10001;
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .error-404 h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #ff0000;
+        }
+        
+        .error-404 p {
+            font-size: 1rem;
+            color: #888;
+            margin-bottom: 2rem;
+        }
+        
+        .error-404 a {
+            color: #00ff00;
+            text-decoration: none;
+            border: 1px solid #00ff00;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .error-404 a:hover {
+            background: #00ff00;
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal" id="mainTerminal">
+        <div class="terminal-header">
+            <div class="terminal-buttons">
+                <div class="terminal-button close"></div>
+                <div class="terminal-button minimize"></div>
+                <div class="terminal-button maximize"></div>
+            </div>
+            <div class="terminal-title">escape-mode@terminal</div>
+        </div>
+        
+        <div class="prompt">$ whoami</div>
+        <div class="output clickable-text" onclick="showWisdomQuote()" style="cursor: pointer;" onmouseover="this.style.color='#88ff88'; this.style.textShadow='0 0 10px #00ff00';" onmouseout="this.style.color='#f0f0f0'; this.style.textShadow='none';">一个厌倦了代码的程序员</div>
+        
+        <div class="prompt">$ pwd</div>
+        <div class="output">/home/programmer/another-endless-project</div>
+        
+        <div class="prompt">$ ls -la</div>
+        <div class="output">
+total 99999<br>
+drwxr-xr-x 1 programmer programmer 4096 Oct 24 10:23 .<br>
+drwxr-xr-x 1 programmer programmer 4096 Oct 24 10:23 ..<br>
+-rw-r--r-- 1 programmer programmer 9999 Oct 24 10:23 bugs-everywhere.js<br>
+-rw-r--r-- 1 programmer programmer 8888 Oct 24 10:23 deadline-tomorrow.txt<br>
+-rw-r--r-- 1 programmer programmer 7777 Oct 24 10:23 impossible-requirements.doc<br>
+-rw-r--r-- 1 programmer programmer 6666 Oct 24 10:23 weekend-cancelled.email<br>
+        </div>
+        
+        <div class="prompt">$ <span class="typing-effect">需要逃离吗？</span><span class="blink" id="cursor">_</span></div>
+        
+        <div id="inputContainer" class="hidden">
+            <div class="prompt">$ <input type="text" id="userInput" class="terminal-input" placeholder="yes 或 no" autocomplete="off"></div>
+        </div>
+        
+        <div class="escape-menu">
+            <button class="escape-option" onclick="startAudioEscape('breathing')">
+                [F1] 呼吸模式 - 闭眼听引导
+            </button>
+            <button class="escape-option" onclick="startAudioEscape('meditation')">
+                [F2] 冥想模式 - 音频引导放松
+            </button>
+            <button class="escape-option" onclick="startAudioEscape('nature')">
+                [F3] 自然声音 - 雨声/海浪/森林
+            </button>
+            <button class="escape-option" onclick="startAudioEscape('silence')">
+                [F4] 纯粹安静 - 什么都没有
+            </button>
+            <button class="escape-option" onclick="startAudioEscape('white-noise')">
+                [F5] 白噪音 - 屏蔽一切
+            </button>
+        </div>
+        
+        <div class="prompt" style="margin-top: 2rem;">$ 提示：所有模式都支持闭眼使用，有音频引导</div>
+    </div>
+    
+    <div class="audio-mode" id="audioMode">
+        <div class="audio-status" id="audioStatus">正在准备音频...</div>
+        <div id="audioGuide"></div>
+        
+        <div class="audio-controls">
+            <button class="audio-button" onclick="pauseAudio()">暂停</button>
+            <button class="audio-button danger" onclick="stopAudio()">停止逃离</button>
+        </div>
+    </div>
+    
+    <script>
+        let audioContext;
+        let currentOscillator;
+        let currentGain;
+        let isPlaying = false;
+        let guideInterval;
+        let currentMode = '';
+        
+        // 初始化音频上下文
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+        
+        // 播放治愈频率
+        function playHealingFrequency(frequency, duration = 60) {
+            initAudio();
+            
+            if (currentOscillator) {
+                currentOscillator.stop();
+            }
+            
+            currentOscillator = audioContext.createOscillator();
+            currentGain = audioContext.createGain();
+            
+            currentOscillator.connect(currentGain);
+            currentGain.connect(audioContext.destination);
+            
+            currentOscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            currentOscillator.type = 'sine';
+            
+            // 轻柔的音量渐变
+            currentGain.gain.setValueAtTime(0, audioContext.currentTime);
+            currentGain.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + 2);
+            
+            currentOscillator.start();
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (currentGain) {
+                        currentGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 2);
+                    }
+                    setTimeout(() => {
+                        if (currentOscillator) {
+                            currentOscillator.stop();
+                        }
+                    }, 2000);
+                }, duration * 1000);
+            }
+            
+            isPlaying = true;
+        }
+        
+        // 播放自然声音
+        function playNatureSound(type) {
+            initAudio();
+            
+            if (currentOscillator) {
+                currentOscillator.stop();
+            }
+            
+            // 创建粉红噪声（更自然的背景音）
+            const bufferSize = 4096;
+            const pinkNoise = audioContext.createScriptProcessor(bufferSize, 1, 1);
+            let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+            
+            pinkNoise.onaudioprocess = function(e) {
+                const output = e.outputBuffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    b0 = 0.99886 * b0 + white * 0.0555179;
+                    b1 = 0.99332 * b1 + white * 0.0750759;
+                    b2 = 0.96900 * b2 + white * 0.1538520;
+                    b3 = 0.86650 * b3 + white * 0.3104856;
+                    b4 = 0.55000 * b4 + white * 0.5329522;
+                    b5 = -0.7616 * b5 - white * 0.0168980;
+                    output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
+                    output[i] *= 0.11;
+                    b6 = white * 0.115926;
+                }
+            };
+            
+            currentGain = audioContext.createGain();
+            pinkNoise.connect(currentGain);
+            currentGain.connect(audioContext.destination);
+            
+            currentGain.gain.setValueAtTime(0, audioContext.currentTime);
+            currentGain.gain.linearRampToValueAtTime(0.1, audioContext.currentTime + 2);
+            
+            currentOscillator = pinkNoise;
+            isPlaying = true;
+        }
+        
+        // 音频引导
+        function startAudioGuidance(mode) {
+            const statusEl = document.getElementById('audioStatus');
+            const guideEl = document.getElementById('audioGuide');
+            
+            const guidance = {
+                'breathing': [
+                    "找一个舒适的位置，闭上眼睛...",
+                    "深深地吸气，数到4...",
+                    "屏住呼吸，数到4...",
+                    "慢慢地呼气，数到6...",
+                    "重复这个过程，让身心放松...",
+                    "感受呼吸的节奏，像海浪一样起伏...",
+                    "让所有的代码、bug、需求都随着呼气离开...",
+                    "你不需要修复任何东西，只需要呼吸..."
+                ],
+                'meditation': [
+                    "找一个舒适的姿势坐好，闭上眼睛...",
+                    "将注意力集中在呼吸上...",
+                    "当思绪飘走时，温柔地将它带回呼吸...",
+                    "你不是一个程序员，你是一个完整的人...",
+                    "让思维像云一样飘过，不要抓住它们...",
+                    "感受此刻的宁静，这比任何代码都重要...",
+                    "你值得休息，值得被爱，值得快乐...",
+                    "此刻，没有语法错误，没有异常，只有存在..."
+                ],
+                'nature': [
+                    "闭上眼睛，想象自己坐在森林中...",
+                    "听，那是大自然的声音...",
+                    "让自然的声音洗涤你的心灵...",
+                    "你不需要做任何事情，只需要倾听...",
+                    "感受大自然的力量和宁静...",
+                    "让所有的压力都随着声音消散...",
+                    "你是自然的一部分，不是代码的一部分...",
+                    "保持这种状态，越久越好..."
+                ],
+                'silence': [
+                    "闭上眼睛...",
+                    "感受纯粹的宁静...",
+                    "没有声音，没有干扰...",
+                    "只有你和你的内心...",
+                    "让思维自然地流动...",
+                    "不要试图控制任何东西...",
+                    "享受这份难得的宁静...",
+                    "停留在这里..."
+                ],
+                'white-noise': [
+                    "闭上眼睛...",
+                    "让白噪音屏蔽一切干扰...",
+                    "感受声音的温暖拥抱...",
+                    "让思维在白噪音中放松...",
+                    "你不需要听任何具体的东西...",
+                    "让声音带你进入深度放松...",
+                    "屏蔽掉所有的代码和逻辑...",
+                    "沉浸在这份宁静中..."
+                ]
+            };
+            
+            const messages = guidance[mode] || guidance['silence'];
+            let index = 0;
+            
+            function updateGuide() {
+                if (index < messages.length) {
+                    statusEl.textContent = messages[index];
+                    speakText(messages[index]);
+                    index++;
+                } else {
+                    // 循环播放
+                    index = 0;
+                    statusEl.textContent = messages[0];
+                    speakText(messages[0]);
+                }
+            }
+            
+            updateGuide();
+            guideInterval = setInterval(updateGuide, 15000); // 每15秒更新一次
+        }
+        
+        // 文字转语音
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'zh-CN';
+                utterance.rate = 0.7;
+                utterance.pitch = 0.8;
+                utterance.volume = 0.6;
+                speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // 开始逃离模式
+        function startAudioEscape(mode) {
+            currentMode = mode;
+            document.getElementById('mainTerminal').style.display = 'none';
+            document.getElementById('audioMode').classList.add('show');
+            
+            const statusMessages = {
+                'breathing': '正在进入呼吸模式...',
+                'meditation': '正在进入冥想模式...',
+                'nature': '正在播放自然声音...',
+                'silence': '正在进入宁静模式...',
+                'white-noise': '正在播放白噪音...'
+            };
+            
+            document.getElementById('audioStatus').textContent = statusMessages[mode];
+            speakText(statusMessages[mode]);
+            
+            // 根据模式播放不同的音频
+            setTimeout(() => {
+                switch(mode) {
+                    case 'breathing':
+                        playHealingFrequency(432, 300); // 432Hz 治愈频率，5分钟
+                        break;
+                    case 'meditation':
+                        playHealingFrequency(528, 600); // 528Hz 爱的频率，10分钟
+                        break;
+                    case 'nature':
+                        playNatureSound('pink');
+                        break;
+                    case 'silence':
+                        // 纯静默，只播放引导语音
+                        break;
+                    case 'white-noise':
+                        playNatureSound('white');
+                        break;
+                }
+                
+                startAudioGuidance(mode);
+            }, 3000);
+        }
+        
+        // 暂停音频
+        function pauseAudio() {
+            if (currentGain) {
+                if (isPlaying) {
+                    currentGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 1);
+                    speakText('音频已暂停，按任意键继续');
+                } else {
+                    currentGain.gain.linearRampToValueAtTime(0.05, audioContext.currentTime + 1);
+                    speakText('音频继续播放');
+                }
+                isPlaying = !isPlaying;
+            }
+        }
+        
+        // 停止音频
+        function stopAudio() {
+            if (guideInterval) {
+                clearInterval(guideInterval);
+            }
+            
+            if (currentOscillator) {
+                if (currentGain) {
+                    currentGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 2);
+                }
+                setTimeout(() => {
+                    if (currentOscillator) {
+                        currentOscillator.stop();
+                    }
+                }, 2000);
+            }
+            
+            speakText('正在返回终端...');
+            
+            setTimeout(() => {
+                document.getElementById('audioMode').classList.remove('show');
+                document.getElementById('mainTerminal').style.display = 'block';
+                
+                currentOscillator = null;
+                currentGain = null;
+                isPlaying = false;
+                currentMode = '';
+            }, 3000);
+        }
+        
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (document.getElementById('audioMode').classList.contains('show')) {
+                if (e.key === 'Escape') {
+                    stopAudio();
+                } else if (e.key === ' ') {
+                    e.preventDefault();
+                    pauseAudio();
+                }
+            } else {
+                switch(e.key) {
+                    case 'F1':
+                        e.preventDefault();
+                        startAudioEscape('breathing');
+                        break;
+                    case 'F2':
+                        e.preventDefault();
+                        startAudioEscape('meditation');
+                        break;
+                    case 'F3':
+                        e.preventDefault();
+                        startAudioEscape('nature');
+                        break;
+                    case 'F4':
+                        e.preventDefault();
+                        startAudioEscape('silence');
+                        break;
+                    case 'F5':
+                        e.preventDefault();
+                        startAudioEscape('white-noise');
+                        break;
+                }
+            }
+        });
+        
+        // 点击"需要逃离吗？"开始输入
+        document.getElementById('cursor').addEventListener('click', function() {
+            document.getElementById('cursor').style.display = 'none';
+            document.getElementById('inputContainer').classList.remove('hidden');
+            document.getElementById('userInput').focus();
+        });
+        
+        // 处理用户输入
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                const input = this.value.trim().toLowerCase();
+                if (input === 'yes') {
+                    startDestruction();
+                } else if (input === 'no') {
+                    setTimeout(() => {
+                        window.location.href = '404.html';
+                    }, 2000);
+                } else {
+                    // 无效输入，重新显示光标
+                    document.getElementById('inputContainer').classList.add('hidden');
+                    document.getElementById('cursor').style.display = 'inline';
+                    this.value = '';
+                }
+            }
+        });
+        
+        // 毁灭模式 - 全屏乱码、字符掉落、屏幕破碎
+        function startDestruction() {
+            const terminal = document.getElementById('mainTerminal');
+            const body = document.body;
+            
+            // 1. 添加故障效果
+            terminal.classList.add('glitch');
+            
+            // 2. 创建屏幕破碎效果
+            setTimeout(() => {
+                createScreenShatter();
+            }, 500);
+            
+            // 3. 开始字符雨 (已移除字符掉落效果)
+            // setTimeout(() => {
+            //     startCharacterRain();
+            // }, 1000);
+            
+            // 最终变黑，偶尔有星星
+            setTimeout(() => {
+                body.style.background = '#000';
+                terminal.style.display = 'none';
+                startTwinklingStars();
+                showTypingAnimation();
+                initInfiniteScroll();
+            }, 3000);
+        }
+        
+        // 打字动画显示祝福语
+        function showTypingAnimation() {
+            const messageDiv = document.createElement('div');
+            messageDiv.style.position = 'fixed';
+            messageDiv.style.bottom = '100px';
+            messageDiv.style.left = '50%';
+            messageDiv.style.transform = 'translateX(-50%)';
+            messageDiv.style.color = '#00ff00';
+            messageDiv.style.fontFamily = 'Courier New, monospace';
+            messageDiv.style.fontSize = '48px';
+            messageDiv.style.textShadow = '0 0 20px #00ff00';
+            messageDiv.style.zIndex = '1000';
+            messageDiv.style.letterSpacing = '4px';
+            messageDiv.style.textAlign = 'center';
+            messageDiv.style.lineHeight = '1.5';
+            messageDiv.style.fontWeight = 'bold';
+            
+            document.body.appendChild(messageDiv);
+            
+            // 分两行显示：1024 和 祝所有程序员节日快乐
+            const line1 = "1024";
+            const line2 = "祝所有程序员节日快乐";
+            
+            // 打字效果 - 第一行
+            let index = 0;
+            const typeInterval = setInterval(() => {
+                if (index < line1.length) {
+                    messageDiv.innerHTML = line1.substring(0, index + 1);
+                    index++;
+                    
+                    // 添加打字音效
+                    playTypingSound();
+                } else if (index === line1.length) {
+                    // 换行并开始第二行
+                    messageDiv.innerHTML = line1 + '<br>';
+                    index++;
+                    
+                    // 开始第二行打字
+                    let line2Index = 0;
+                    const line2Interval = setInterval(() => {
+                        if (line2Index < line2.length) {
+                            messageDiv.innerHTML = line1 + '<br>' + line2.substring(0, line2Index + 1);
+                            line2Index++;
+                            
+                            // 添加打字音效
+                            playTypingSound();
+                        } else {
+                            clearInterval(line2Interval);
+                            
+                            // 打字完成后闪烁效果
+                            setTimeout(() => {
+                                messageDiv.style.animation = 'pulse 1s infinite';
+                            }, 500);
+                        }
+                    }, 150);
+                    
+                    clearInterval(typeInterval);
+                }
+            }, 200);
+        }
+        
+        // 打字音效
+        function playTypingSound() {
+            if (typeof AudioContext !== 'undefined' || typeof webkitAudioContext !== 'undefined') {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800 + Math.random() * 400, audioContext.currentTime);
+                oscillator.type = 'square';
+                
+                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+            }
+        }
+        
+        // 创建屏幕破碎效果
+        function createScreenShatter() {
+            const shatterContainer = document.createElement('div');
+            shatterContainer.className = 'screen-shatter';
+            document.body.appendChild(shatterContainer);
+            
+            const rows = 10;
+            const cols = 15;
+            const pieceWidth = window.innerWidth / cols;
+            const pieceHeight = window.innerHeight / rows;
+            
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const piece = document.createElement('div');
+                    piece.className = 'shatter-piece';
+                    piece.style.width = pieceWidth + 'px';
+                    piece.style.height = pieceHeight + 'px';
+                    piece.style.left = (j * pieceWidth) + 'px';
+                    piece.style.top = (i * pieceHeight) + 'px';
+                    
+                    // 随机方向和旋转
+                    const tx = (Math.random() - 0.5) * 1000;
+                    const ty = (Math.random() - 0.5) * 1000;
+                    const r = (Math.random() - 0.5) * 720;
+                    
+                    piece.style.setProperty('--tx', tx + 'px');
+                    piece.style.setProperty('--ty', ty + 'px');
+                    piece.style.setProperty('--r', r + 'deg');
+                    
+                    shatterContainer.appendChild(piece);
+                }
+            }
+        }
+        
+        // 字符雨效果
+        function startCharacterRain() {
+            const characters = '01!@#$%^&*()_+-=[]{}|;:,.<>?~`ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+            
+            function createFallingChar() {
+                const char = document.createElement('div');
+                char.className = 'falling-char';
+                char.textContent = characters[Math.floor(Math.random() * characters.length)];
+                char.style.left = Math.random() * window.innerWidth + 'px';
+                char.style.animationDuration = (Math.random() * 3 + 2) + 's';
+                
+                document.body.appendChild(char);
+                
+                // 动画结束后移除元素
+                setTimeout(() => {
+                    if (char.parentNode) {
+                        char.parentNode.removeChild(char);
+                    }
+                }, 5000);
+            }
+            
+            // 持续创建掉落的字符
+            const rainInterval = setInterval(() => {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => createFallingChar(), i * 100);
+                }
+            }, 200);
+            
+            // 30秒后停止字符雨
+            setTimeout(() => {
+                clearInterval(rainInterval);
+            }, 30000);
+        }
+        
+        // 闪烁星星效果
+        function startTwinklingStars() {
+            function createStar() {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.textContent = '✦';
+                star.style.left = Math.random() * window.innerWidth + 'px';
+                star.style.top = Math.random() * window.innerHeight + 'px';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                
+                document.body.appendChild(star);
+                
+                // 随机移除星星
+                setTimeout(() => {
+                    if (star.parentNode) {
+                        star.parentNode.removeChild(star);
+                    }
+                }, Math.random() * 10000 + 5000);
+            }
+            
+            // 偶尔创建星星
+            setInterval(() => {
+                if (Math.random() < 0.3) { // 30%概率
+                    createStar();
+                }
+            }, 2000);
+        }
+        
+        // 无限滚动彩蛋 - 屏幕炸裂 + 字母雨
+        function initInfiniteScroll() {
+            let explosionTriggered = false;
+            
+            // 创建很长的内容区域
+            const longContent = document.createElement('div');
+            longContent.style.height = '5000px';
+            longContent.style.position = 'relative';
+            longContent.style.pointerEvents = 'none';
+            longContent.innerHTML = `
+                <div class="scroll-hint" style="top: 1000px;">
+                    ↓ 继续向下滚动 ↓
+                </div>
+                <div class="scroll-hint" style="top: 2000px; color: #444; font-size: 16px;">
+                    你确定要继续吗？
+                </div>
+                <div class="scroll-hint" style="top: 3000px; color: #555; font-size: 18px;">
+                    警告：前方危险区域
+                </div>
+                <div class="scroll-hint" style="top: 4000px; color: #666; font-size: 20px;">
+                    最后机会，回头是岸！
+                </div>
+                <div class="scroll-warning" style="top: 4500px;">
+                    爆炸即将开始...
+                </div>
+            `;
+            document.body.appendChild(longContent);
+            
+            // 监听滚动事件
+            window.addEventListener('scroll', () => {
+                const scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+                const windowHeight = window.innerHeight;
+                const documentHeight = document.documentElement.scrollHeight;
+                
+                // 当滚动到接近底部时触发爆炸
+                if (scrollPosition + windowHeight >= documentHeight - 500 && !explosionTriggered) {
+                    explosionTriggered = true;
+                    triggerScrollExplosion();
+                }
+            });
+        }
+        
+        // 触发滚动爆炸效果
+        function triggerScrollExplosion() {
+            // 屏幕炸裂效果
+            const explosionDiv = document.createElement('div');
+            explosionDiv.style.position = 'fixed';
+            explosionDiv.style.top = '0';
+            explosionDiv.style.left = '0';
+            explosionDiv.style.width = '100%';
+            explosionDiv.style.height = '100%';
+            explosionDiv.style.background = 'radial-gradient(circle, #ff0000, #ff6600, #ffff00, #000)';
+            explosionDiv.style.zIndex = '9999';
+            explosionDiv.style.animation = 'explosion 2s ease-out forwards';
+            document.body.appendChild(explosionDiv);
+            
+            // 创建爆炸CSS动画
+            const explosionStyle = document.createElement('style');
+            explosionStyle.textContent = `
+                @keyframes explosion {
+                    0% { transform: scale(0); opacity: 1; }
+                    50% { transform: scale(2); opacity: 0.8; }
+                    100% { transform: scale(5); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(explosionStyle);
+            
+            // 2秒后开始字母雨
+            setTimeout(() => {
+                explosionDiv.remove();
+                startAlphabetRain();
+            }, 2000);
+        }
+        
+        // 字母雨效果 (移除字母雨和字符掉落)
+        function startAlphabetRain() {
+            // 清除现有内容
+            document.body.innerHTML = '';
+            document.body.style.background = '#000';
+            document.body.style.overflow = 'hidden';
+            
+            // 直接显示打字动画文字，不显示字母雨
+            setTimeout(() => {
+                showAlphabetRainTyping();
+            }, 1000);
+            
+            // 10秒后显示重新开始按钮
+            setTimeout(() => {
+                showRestartButton();
+            }, 8000);
+        }
+        
+        // 字母雨中的打字动画
+        function showAlphabetRainTyping() {
+            const message = '谢谢你们，让勤屎皇活了二十年';
+            const typingDiv = document.createElement('div');
+            typingDiv.style.position = 'fixed';
+            typingDiv.style.top = '30%';
+            typingDiv.style.left = '50%';
+            typingDiv.style.transform = 'translateX(-50%)';
+            typingDiv.style.color = '#00ff00';
+            typingDiv.style.fontSize = '36px';
+            typingDiv.style.fontFamily = 'Courier New, monospace';
+            typingDiv.style.fontWeight = 'bold';
+            typingDiv.style.textShadow = '0 0 20px #00ff00, 0 0 40px #00ff00';
+            typingDiv.style.zIndex = '1500';
+            typingDiv.style.textAlign = 'center';
+            typingDiv.style.lineHeight = '1.5';
+            typingDiv.style.letterSpacing = '2px';
+            typingDiv.style.imageRendering = 'pixelated';
+            typingDiv.style.fontSmoothing = 'none';
+            typingDiv.style.webkitFontSmoothing = 'none';
+            typingDiv.style.mozOsxFontSmoothing = 'grayscale';
+            
+            document.body.appendChild(typingDiv);
+            
+            // 打字音效
+            function playTypingSound() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    oscillator.frequency.value = 600 + Math.random() * 200;
+                    oscillator.type = 'sine';
+                    gainNode.gain.value = 0.1;
+                    
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.05);
+                } catch (e) {
+                    console.log('音频播放失败:', e);
+                }
+            }
+            
+            // 逐字显示
+            let charIndex = 0;
+            const typingInterval = setInterval(() => {
+                if (charIndex < message.length) {
+                    const span = document.createElement('span');
+                    span.textContent = message[charIndex];
+                    span.className = 'typing-char';
+                    span.style.animationDelay = '0s';
+                    typingDiv.appendChild(span);
+                    playTypingSound();
+                    charIndex++;
+                } else {
+                    clearInterval(typingInterval);
+                    // 完成后添加闪烁效果
+                    setTimeout(() => {
+                        typingDiv.style.animation = 'pulse 1s infinite';
+                    }, 500);
+                }
+            }, 150);
+        }
+        
+        // 显示重新开始按钮
+        function showRestartButton() {
+            const restartBtn = document.createElement('button');
+            restartBtn.textContent = '宇宙见';
+            restartBtn.style.position = 'fixed';
+            restartBtn.style.bottom = '50px';
+            restartBtn.style.left = '50%';
+            restartBtn.style.transform = 'translateX(-50%)';
+            restartBtn.style.padding = '15px 30px';
+            restartBtn.style.background = '#00ff00';
+            restartBtn.style.color = '#000';
+            restartBtn.style.border = 'none';
+            restartBtn.style.borderRadius = '0px';
+            restartBtn.style.fontSize = '18px';
+            restartBtn.style.fontFamily = 'Courier New, monospace';
+            restartBtn.style.fontWeight = 'bold';
+            restartBtn.style.cursor = 'pointer';
+            restartBtn.style.zIndex = '2000';
+            restartBtn.style.boxShadow = '0 0 20px #00ff00';
+            restartBtn.style.imageRendering = 'pixelated';
+            restartBtn.style.fontSmoothing = 'none';
+            restartBtn.style.webkitFontSmoothing = 'none';
+            restartBtn.style.mozOsxFontSmoothing = 'grayscale';
+            
+            restartBtn.onclick = () => {
+                showNoFoundScreen();
+            };
+            
+            document.body.appendChild(restartBtn);
+            
+            // 按钮闪烁效果
+            setInterval(() => {
+                restartBtn.style.opacity = restartBtn.style.opacity === '0.7' ? '1' : '0.7';
+            }, 1000);
+        }
+        
+        // 显示No Found屏幕
+        function showNoFoundScreen() {
+            // 清除现有内容
+            document.body.innerHTML = '';
+            document.body.style.background = '#000';
+            document.body.style.overflow = 'hidden';
+            document.body.style.margin = '0';
+            document.body.style.padding = '0';
+            document.body.style.height = '100vh';
+            document.body.style.display = 'flex';
+            document.body.style.flexDirection = 'column';
+            document.body.style.justifyContent = 'center';
+            document.body.style.alignItems = 'center';
+            
+            // 创建No Found文字
+            const noFoundDiv = document.createElement('div');
+            noFoundDiv.textContent = 'No Found';
+            noFoundDiv.style.color = '#ff0000';
+            noFoundDiv.style.fontSize = '72px';
+            noFoundDiv.style.fontFamily = 'Courier New, monospace';
+            noFoundDiv.style.fontWeight = 'bold';
+            noFoundDiv.style.textShadow = '0 0 30px #ff0000, 0 0 60px #ff0000';
+            noFoundDiv.style.animation = 'glitch 2s infinite';
+            noFoundDiv.style.marginBottom = '50px';
+            
+            // 创建中文文字
+            const chineseText = document.createElement('div');
+            chineseText.textContent = '如果我真的存在，也许因为你需要我';
+            chineseText.style.color = '#00ff00';
+            chineseText.style.fontSize = '24px';
+            chineseText.style.fontFamily = 'Courier New, monospace';
+            chineseText.style.textShadow = '0 0 10px #00ff00';
+            chineseText.style.marginBottom = '20px';
+            chineseText.style.opacity = '0';
+            chineseText.style.animation = 'fadeIn 3s forwards';
+            chineseText.style.animationDelay = '1s';
+            
+            // 创建英文文字
+            const englishText = document.createElement('div');
+            englishText.textContent = 'I exist because you need me.';
+            englishText.style.color = '#00ffff';
+            englishText.style.fontSize = '20px';
+            englishText.style.fontFamily = 'Courier New, monospace';
+            englishText.style.fontStyle = 'italic';
+            englishText.style.textShadow = '0 0 10px #00ffff';
+            englishText.style.opacity = '0';
+            englishText.style.animation = 'fadeIn 3s forwards';
+            englishText.style.animationDelay = '2s';
+            
+            // 添加故障动画样式
+            const glitchStyle = document.createElement('style');
+            glitchStyle.textContent = `
+                @keyframes glitch {
+                    0% { transform: translate(0); }
+                    20% { transform: translate(-2px, 2px); }
+                    40% { transform: translate(-2px, -2px); }
+                    60% { transform: translate(2px, 2px); }
+                    80% { transform: translate(2px, -2px); }
+                    100% { transform: translate(0); }
+                }
+                
+                @keyframes fadeIn {
+                    to { opacity: 1; }
+                }
+                
+                @keyframes starTwinkle {
+                    0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+                    50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+                    100% { opacity: 0; transform: scale(0.8) rotate(360deg); }
+                }
+            `;
+            document.head.appendChild(glitchStyle);
+            
+            document.body.appendChild(noFoundDiv);
+            document.body.appendChild(chineseText);
+            document.body.appendChild(englishText);
+            
+            // 5秒后显示返回按钮
+            setTimeout(() => {
+                showReturnButton();
+            }, 5000);
+        }
+        
+        // 显示返回按钮 - 现在改为创建星星闪烁效果
+        function showReturnButton() {
+            // 不再显示返回按钮，让页面停留在存在主义终章
+            // 创建星星闪烁效果
+            createStarField();
+        }
+        
+        // 创建星星闪烁效果
+        function createStarField() {
+            const starCount = 50;
+            for (let i = 0; i < starCount; i++) {
+                setTimeout(() => {
+                    createStar();
+                }, i * 100);
+            }
+            
+            // 持续创建新的星星
+            setInterval(createStar, 2000);
+        }
+        
+        // 创建单个星星
+        function createStar() {
+            const star = document.createElement('div');
+            star.textContent = '✦';
+            star.style.cssText = `
+                position: absolute;
+                color: #ffffff;
+                font-size: ${Math.random() * 20 + 10}px;
+                opacity: 0;
+                pointer-events: none;
+                text-shadow: 0 0 10px #ffffff, 0 0 20px #ffffff;
+                animation: starTwinkle ${Math.random() * 3 + 2}s ease-in-out infinite;
+            `;
+            
+            // 随机位置
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            
+            document.body.appendChild(star);
+            
+            // 3秒后移除星星
+            setTimeout(() => {
+                if (star.parentNode) {
+                    star.parentNode.removeChild(star);
+                }
+            }, 5000);
+        }
+
+        // 显示智慧语录 - 全屏沉浸式
+        function showWisdomQuote() {
+            // 语录数组
+            const quotes = [
+                "最好的调试工具是睡眠，最好的性能优化是休息。",
+                "代码只是工具，生活才是目的。不要让工具控制了生活。",
+                "每一个bug都在提醒我们：完美是不存在的，接受不完美才是智慧。",
+                "当你凝视代码时，代码也在凝视你。偶尔抬头看看真实的世界。",
+                "最好的代码是明天写的代码，因为今天你休息了。",
+                "程序会崩溃，但生活不会。记住什么才是真正重要的。",
+                "你不是你的代码。你的价值不取决于括号和大括号。",
+                "有时候，最好的解决方案是关掉电脑，去拥抱你爱的人。",
+                "代码世界很大，但真实世界更大。不要忘记后者。",
+                "每一个程序员都应该学会：如何优雅地放下键盘。",
+                "bug永远不会消失，但你会疲惫。学会与bug和平共处。",
+                "最好的编程语言是人类的语言，最好的算法是真诚的交流。",
+                "当你在代码中迷失时，记住：你首先是一个人，然后才是一个程序员。",
+                "生活不是编译器，不会给你错误提示。但会给你温柔的提醒。",
+                "真正的技术大牛，都懂得如何照顾自己的身心健康。",
+                "代码可以被重构，但生活不能。珍惜每一个当下。",
+                "最好的注释是微笑，最好的文档是拥抱。",
+                "程序的世界是0和1，但你的世界可以有无限色彩。",
+                "当你觉得代码比生活更重要时，就是该休息的时候了。"
+            ];
+            
+            // 随机选择一条语录
+            const randomQuote = quotes[Math.floor(Math.random() * quotes.length)];
+            
+            // 清除现有内容
+            document.body.innerHTML = '';
+            document.body.style.background = '#000';
+            document.body.style.overflow = 'hidden';
+            document.body.style.margin = '0';
+            document.body.style.padding = '0';
+            document.body.style.height = '100vh';
+            document.body.style.display = 'flex';
+            document.body.style.justifyContent = 'center';
+            document.body.style.alignItems = 'center';
+            
+            // 创建语录容器
+            const quoteContainer = document.createElement('div');
+            quoteContainer.style.cssText = `
+                color: #00ff00;
+                font-size: 36px;
+                font-family: 'Courier New', monospace;
+                text-align: center;
+                line-height: 1.6;
+                max-width: 80%;
+                opacity: 0;
+                animation: fadeIn 2s forwards;
+                text-shadow: 0 0 20px #00ff00, 0 0 40px #00ff00;
+                cursor: pointer;
+                user-select: none;
+                image-rendering: pixelated;
+                font-smooth: never;
+                -webkit-font-smoothing: none;
+                -moz-osx-font-smoothing: grayscale;
+            `;
+            quoteContainer.textContent = randomQuote;
+            
+            // 添加淡入动画样式
+            const fadeInStyle = document.createElement('style');
+            fadeInStyle.textContent = `
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `;
+            document.head.appendChild(fadeInStyle);
+            
+            // 点击任意位置返回
+            quoteContainer.onclick = () => {
+                location.reload();
+            };
+            
+            document.body.appendChild(quoteContainer);
+        }
+
+        // 显示404页面
+        function show404() {
+            const error404 = document.createElement('div');
+            error404.className = 'error-404';
+            error404.innerHTML = `
+                <h1>404</h1>
+                <p>页面不存在，就像你对编程的热情</p>
+                <a href="#" onclick="location.reload(); return false;">重新加载</a>
+            `;
+            
+            document.body.appendChild(error404);
+            
+            // 隐藏原页面
+            document.getElementById('mainTerminal').style.display = 'none';
+            document.getElementById('audioMode').style.display = 'none';
+            
+            // 播放404音效
+            if (audioContext) {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                osc.frequency.setValueAtTime(200, audioContext.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 1);
+                
+                gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+                
+                osc.start();
+                osc.stop(audioContext.currentTime + 1);
+            }
+        }
+        
+        // 初始化
+        window.onload = function() {
+            speakText('逃离模式已就绪。点击光标输入yes或no，或者按F1到F5选择逃离方式。');
+        };
+    </script>
+</body>
+</html>
